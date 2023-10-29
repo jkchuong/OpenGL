@@ -144,6 +144,9 @@
   <ItemGroup>
     <ClInclude Include="src\main.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="res\shaders\Basics.shader" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
