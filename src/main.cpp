@@ -156,11 +156,6 @@ void DrawShape()
 	GLCall(glGenBuffers(1, &ibo));
 	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
 	GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW));
-
-
-	ShaderProgramSource source = ParseShader("res/shaders/Basics.shader");
-	unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
-	GLCall(glUseProgram(shader));
 }
 
 int main()
@@ -198,6 +193,9 @@ int main()
 	// Set context for GLEW to use
 	glfwMakeContextCurrent(mainWindow);
 
+	// Sync refresh rate to our vsync
+	glfwSwapInterval(5);
+
 	// Allow modern extension features
 	glewExperimental = GL_TRUE;
 
@@ -212,9 +210,23 @@ int main()
 
 	// Setup viewport size
 	glViewport(0, 0, bufferWidth, bufferHeight);
+	
+	std::cout << glGetString(GL_VERSION) << std::endl;
 
 	DrawShape();
-	std::cout << glGetString(GL_VERSION) << std::endl;
+
+	// Use the shaders
+	ShaderProgramSource source = ParseShader("res/shaders/Basics.shader");
+	unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
+	GLCall(glUseProgram(shader));
+
+	// Assigning values to use for shader via code
+	GLCall(int location = glGetUniformLocation(shader, "u_Color"));
+	ASSERT(location != -1);
+	GLCall(glUniform4f(location, 0.8f, 0.3f, 0.8f, 1.0f));
+
+	float r = 0.0f;
+	float increment = 0.05f;
 
 	// Main loop until user closes the window
 	while (!glfwWindowShouldClose(mainWindow))
@@ -222,6 +234,15 @@ int main()
 
 		// Clear window
 		glClear(GL_COLOR_BUFFER_BIT);
+
+		// Called per draw
+		GLCall(glUniform4f(location, r, r - 0.25f, r + 0.25f, 1.0f));
+		if (r > 1.0f || r < 0.0f)
+		{
+			increment *= -1;
+		}
+
+		r += increment;
 
 		// Draw using indices instead of array of positions
 		//glDrawArrays(GL_TRIANGLES, 0, 6); // Legacy OpenGL
