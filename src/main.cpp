@@ -31,8 +31,6 @@ static bool GLLogCall(const char* function, const char* file, int line)
 
 const int WIDTH = 800, HEIGHT = 600;
 
-unsigned int VAO, VBO, shader; // Vertex Array Object, Vertex Buffer Object
-
 struct ShaderProgramSource
 {
 	std::string VertexSource;
@@ -124,40 +122,6 @@ static unsigned int CreateShader(const std::string& vertexShader, const std::str
 	return program;
 }
 
-void DrawShape()
-{
-	// Coords of the three points of the triangle
-	float positions[] =
-	{
-		-0.5f, -0.5f, // 0
-		 0.5f, -0.5f, // 1
-		 0.5f,  0.5f, // 2
-		-0.5f,  0.5f, // 3
-	};
-
-	// Create an index buffer to remove duplicate vertices
-	unsigned int indices[] =
-	{
-		0, 1, 2,
-		2, 3, 0
-	};
-
-	GLCall(glGenVertexArrays(1, &VAO));
-	GLCall(glBindVertexArray(VAO));
-
-	GLCall(glGenBuffers(1, &VBO));
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, VBO));
-	GLCall(glBufferData(GL_ARRAY_BUFFER, 6 * 2  * sizeof(float), positions, GL_STATIC_DRAW)); // Static draw -> Not going to change triangle values
-
-	GLCall(glEnableVertexAttribArray(0));
-	GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
-
-	unsigned int ibo; // index buffer object
-	GLCall(glGenBuffers(1, &ibo));
-	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
-	GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW));
-}
-
 int main()
 {
 	// Initialise GLFW
@@ -213,17 +177,54 @@ int main()
 	
 	std::cout << glGetString(GL_VERSION) << std::endl;
 
-	DrawShape();
+	// Coords of the three points of the triangle
+	float positions[] =
+	{
+		-0.5f, -0.5f, // 0
+		 0.5f, -0.5f, // 1
+		 0.5f,  0.5f, // 2
+		-0.5f,  0.5f, // 3
+	};
+
+	// Create an index buffer to remove duplicate vertices
+	unsigned int indices[] =
+	{
+		0, 1, 2,
+		2, 3, 0
+	};
+
+	unsigned int VAO, VBO, IBO, shader; // Vertex Array Object, Vertex Buffer Object, Index Buffer Object
+
+	GLCall(glGenVertexArrays(1, &VAO));
+	GLCall(glBindVertexArray(VAO));
+
+	GLCall(glGenBuffers(1, &VBO));
+	GLCall(glBindBuffer(GL_ARRAY_BUFFER, VBO));
+	GLCall(glBufferData(GL_ARRAY_BUFFER, 4 * 2 * sizeof(float), positions, GL_STATIC_DRAW)); // Static draw -> Not going to change triangle values
+
+	GLCall(glEnableVertexAttribArray(0));
+	GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0)); // Link VBO to VAO
+
+	GLCall(glGenBuffers(1, &IBO));
+	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO));
+	GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(unsigned int), indices, GL_STATIC_DRAW));
 
 	// Use the shaders
 	ShaderProgramSource source = ParseShader("res/shaders/Basics.shader");
-	unsigned int shader = CreateShader(source.VertexSource, source.FragmentSource);
+	shader = CreateShader(source.VertexSource, source.FragmentSource);
 	GLCall(glUseProgram(shader));
 
 	// Assigning values to use for shader via code
 	GLCall(int location = glGetUniformLocation(shader, "u_Color"));
 	ASSERT(location != -1);
 	GLCall(glUniform4f(location, 0.8f, 0.3f, 0.8f, 1.0f));
+
+	// Unbind everything
+	GLCall(glBindVertexArray(0));
+	GLCall(glUseProgram(0));
+	GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0));
+
 
 	float r = 0.0f;
 	float increment = 0.05f;
@@ -235,8 +236,22 @@ int main()
 		// Clear window
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		// Called per draw
+		GLCall(glUseProgram(shader));
 		GLCall(glUniform4f(location, r, r - 0.25f, r + 0.25f, 1.0f));
+
+		// No longer needed if we're binding VAO
+		//GLCall(glBindBuffer(GL_ARRAY_BUFFER, VBO));
+		//GLCall(glEnableVertexAttribArray(0));
+		//GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
+
+		GLCall(glBindVertexArray(VAO));
+		GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO));
+
+		// Draw using indices instead of array of positions
+		//glDrawArrays(GL_TRIANGLES, 0, 6); // Legacy OpenGL
+		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
+
+		// Called per draw
 		if (r > 1.0f || r < 0.0f)
 		{
 			increment *= -1;
@@ -244,9 +259,6 @@ int main()
 
 		r += increment;
 
-		// Draw using indices instead of array of positions
-		//glDrawArrays(GL_TRIANGLES, 0, 6); // Legacy OpenGL
-		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 
 		glfwSwapBuffers(mainWindow);
 
