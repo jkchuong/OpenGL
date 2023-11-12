@@ -10,6 +10,7 @@
 #include "Renderer.h"
 #include "VertexBuffer.h"
 #include "IndexBuffer.h"
+#include "VertexArray.h"
 
 const int WIDTH = 800, HEIGHT = 600;
 
@@ -175,19 +176,17 @@ int main()
 			2, 3, 0
 		};
 
-		unsigned int VAO, shader; // Vertex Array Object, Vertex Buffer Object, Index Buffer Object
-
-		GLCall(glGenVertexArrays(1, &VAO));
-		GLCall(glBindVertexArray(VAO));
-
+		VertexArray va;
 		VertexBuffer vb(positions, 4 * 2 * sizeof(float));
 
-		GLCall(glEnableVertexAttribArray(0));
-		GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0)); // Link VBO to VAO
+		VertexBufferLayout layout;
+		layout.Push<float>(2);
+		va.AddBuffer(vb, layout);
 
 		IndexBuffer ib(indices, 6);
 
 		// Use the shaders
+		unsigned int shader;
 		ShaderProgramSource source = ParseShader("res/shaders/Basics.shader");
 		shader = CreateShader(source.VertexSource, source.FragmentSource);
 		GLCall(glUseProgram(shader));
@@ -217,7 +216,7 @@ int main()
 			GLCall(glUseProgram(shader));
 			GLCall(glUniform4f(location, r, r - 0.25f, r + 0.25f, 1.0f));
 
-			GLCall(glBindVertexArray(VAO));
+			va.Bind();
 			ib.Bind();
 
 			// Draw using indices instead of array of positions
