@@ -9,6 +9,7 @@
 
 #include "Renderer.h"
 #include "VertexBuffer.h"
+#include "VertexBufferLayout.h"
 #include "IndexBuffer.h"
 #include "VertexArray.h"
 #include "Shader.h"
@@ -106,21 +107,20 @@ int main()
 		ib.Unbind();
 		shader.Unbind();
 
+		Renderer renderer;
+
 		float r = 0.0f;
 		float increment = 0.05f;
 
 		// Main loop until user closes the window
 		while (!glfwWindowShouldClose(mainWindow))
 		{
-
-			// Clear window
-			glClear(GL_COLOR_BUFFER_BIT);
+			renderer.Clear();
 
 			shader.Bind();
 			shader.SetUniform4f("u_Color", r, r - 0.25f, r + 0.25f, 1.0f);
 
-			va.Bind();
-			ib.Bind();
+			renderer.Draw(va, ib, shader);
 
 			// Draw using indices instead of array of positions
 			GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
